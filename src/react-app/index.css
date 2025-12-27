@@ -1,0 +1,325 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Thin scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Scratch Card Styles */
+.scratch-app { 
+  width: 100%; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  padding: 16px; 
+  box-sizing: border-box; 
+}
+
+.scratch-stage { 
+  max-width: 640px; 
+  width: 100%; 
+}
+
+.scratch-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  height: 700px;
+  margin: 0 auto;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+}
+
+/* Prize area (center) */
+.scratch-prize { 
+  position: absolute; 
+  inset: 48px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  text-align: center; 
+  z-index: 1; 
+  padding: 12px; 
+  box-sizing: border-box; 
+}
+
+.scratch-prize img { 
+  max-width: 70%; 
+  max-height: 60%; 
+  object-fit: contain; 
+  border-radius: 6px; 
+}
+
+/* Canvas overlay - sits above prize, below instruction */
+.scratch-canvas { 
+  position: absolute; 
+  inset: 48px; 
+  margin: auto; 
+  z-index: 3; 
+  touch-action: none; 
+}
+
+/* Foam foil overlay (visual, not interactive) */
+.scratch-foil {
+  position: absolute; 
+  inset: 48px; 
+  margin: auto; 
+  z-index: 2;
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 50%, #a8a8a8 100%);
+  background-size: cover;
+  opacity: 0.92;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.scratch-foil.gold {
+  background: linear-gradient(135deg, #d4af37 0%, #f4e4a6 50%, #c5a028 100%);
+}
+
+/* Instruction overlay */
+.scratch-instruction { 
+  position: absolute; 
+  inset: 0; 
+  z-index: 4; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  pointer-events: auto; 
+}
+
+.scratch-instruction .btn { 
+  margin-top: 12px; 
+}
+
+.finger-anim { 
+  width: 72px; 
+  height: 72px; 
+  border-radius: 50%; 
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1)); 
+  margin-bottom: 8px; 
+  animation: fingerMove 1.6s ease-in-out infinite; 
+  opacity: 0.9; 
+}
+
+@keyframes fingerMove { 
+  0% { transform: translateY(0); } 
+  50% { transform: translateY(8px); } 
+  100% { transform: translateY(0); } 
+}
+
+.hint { 
+  font-size: 13px; 
+  color: #666; 
+  margin-top: 8px; 
+}
+
+/* Modal */
+.scratch-modal { 
+  position: fixed; 
+  inset: 0; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  background: rgba(0, 0, 0, 0.45); 
+  z-index: 9999; 
+}
+
+.scratch-modal-inner { 
+  width: clamp(340px, 90%, 720px); 
+  padding: 20px; 
+  background: #fff; 
+  border-radius: 8px; 
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2); 
+  text-align: center; 
+}
+
+.scratch-modal-actions { 
+  margin-top: 16px; 
+  display: flex; 
+  gap: 8px; 
+  justify-content: center; 
+}
+
+/* Buttons */
+.btn { 
+  padding: 10px 18px; 
+  border-radius: 8px; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 600; 
+}
+
+.btn-primary { 
+  background: linear-gradient(90deg, #5c4ef5, #e44097); 
+  color: #fff; 
+}
+
+.btn-outline { 
+  background: transparent; 
+  border: 1px solid #ddd; 
+  color: #222; 
+}
+
+.btn-secondary { 
+  background: #f3f4f6; 
+  color: #111; 
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .scratch-card { 
+    height: 520px; 
+  }
+  
+  .scratch-canvas, 
+  .scratch-foil, 
+  .scratch-prize { 
+    inset: 18px; 
+    border-radius: 12px; 
+  }
+}
+
+/* TipTap Editor Prose Styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p {
+  margin-bottom: 1em;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 1em;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-family: monospace;
+  font-size: 0.875em;
+}
+
+.ProseMirror pre {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.ProseMirror a {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+.ProseMirror a:hover {
+  color: #4f46e5;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}

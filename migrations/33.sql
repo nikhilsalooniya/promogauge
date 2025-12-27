@@ -1,0 +1,1 @@
+ALTER TABLE campaigns ADD COLUMN show_watermark BOOLEAN DEFAULT 1;

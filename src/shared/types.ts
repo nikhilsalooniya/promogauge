@@ -1,0 +1,271 @@
+import z from "zod";
+
+// User schemas
+export const UserSchema = z.object({
+  id: z.string(),
+  mocha_user_id: z.string(),
+  business_name: z.string().nullable(),
+  country: z.string().nullable(),
+  currency: z.string().default("USD"),
+  plan_type: z.string().default("free"),
+  plan_expires_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+
+// Campaign schemas
+export const WheelSegmentSchema = z.object({
+  label: z.string(),
+  color: z.string(),
+  icon: z.string().optional(),
+  prize_description: z.string().optional(),
+  redemption_instructions: z.string().optional(),
+  prize_type: z.enum(["discount", "coupon", "free_gift", "free_shipping", "digital_reward", "hamper", "reward", "no_win", "custom"]).optional(),
+  prize_image_url: z.string().optional(),
+  prize_file_url: z.string().optional(),
+  prize_file_name: z.string().optional(),
+  coupon_code: z.string().optional(),
+  coupon_url: z.string().optional(),
+});
+
+export const LeadFormFieldSchema = z.object({
+  name: z.string(),
+  label: z.string(),
+  type: z.enum(["text", "email", "tel"]),
+  required: z.boolean(),
+});
+
+export const CampaignSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  name: z.string(),
+  business_name: z.string().nullable().optional(),
+  campaign_type: z.enum(["spinwheel", "scratch"]),
+  template_id: z.string().nullable(),
+  public_slug: z.string(),
+  logo_url: z.string().nullable(),
+  cover_image_url: z.string().nullable(),
+  is_lead_form_required: z.boolean(),
+  lead_form_fields: z.array(LeadFormFieldSchema),
+  wheel_segments: z.array(WheelSegmentSchema),
+  wheel_colors: z.object({
+    primary: z.string(),
+    secondary: z.string(),
+  }),
+  pointer_color: z.string().optional(),
+  background_color: z.string().optional(),
+  background_gradient_enabled: z.boolean().optional(),
+  background_gradient_start: z.string().optional(),
+  background_gradient_end: z.string().optional(),
+  background_gradient_direction: z.string().optional(),
+  background_image_url: z.string().nullable().optional(),
+  logo_position: z.string().optional(),
+  confetti_enabled: z.boolean().optional(),
+  sound_enabled: z.boolean().optional(),
+  sound_settings: z.object({
+    spin: z.boolean(),
+    win: z.boolean(),
+    noWin: z.boolean(),
+  }).optional(),
+  font_family: z.string().optional(),
+  font_size: z.number().optional(),
+  wheel_border_thickness: z.number().optional(),
+  wheel_border_color: z.string().optional(),
+  pointer_style: z.string().optional(),
+  spin_button_text: z.string().optional(),
+  spin_button_color: z.string().optional(),
+  spin_button_border_radius: z.number().optional(),
+  spin_button_pulse_enabled: z.boolean().optional(),
+  spin_limit_per_email: z.number().nullable().optional(),
+  spin_limit_per_phone: z.number().nullable().optional(),
+  spin_limit_per_ip: z.number().nullable().optional(),
+  spin_limit_per_device: z.number().nullable().optional(),
+  spin_limit_per_day: z.number().nullable().optional(),
+  spin_limit_per_week: z.number().nullable().optional(),
+  spin_limit_total: z.number().nullable().optional(),
+  spin_cooldown_hours: z.number().nullable().optional(),
+  spin_duration_seconds: z.number().optional(),
+  redemption_instructions: z.string().nullable().optional(),
+  border_enabled: z.boolean().optional(),
+  border_theme: z.enum(["default", "custom"]).nullable().optional(),
+  border_default_enabled: z.boolean().optional(),
+  border_default_color: z.string().optional(),
+  border_default_thickness: z.number().optional(),
+  border_custom_colors: z.array(z.string()).optional(),
+  border_bulb_shape: z.enum(["circle", "heart", "star"]).optional(),
+  border_bulb_count: z.number().optional(),
+  border_bulb_size: z.number().optional(),
+  border_blink_speed: z.enum(["slow", "medium", "fast"]).optional(),
+  border_connector_ring_enabled: z.boolean().optional(),
+  border_connector_ring_color: z.string().optional(),
+  border_connector_ring_thickness: z.number().optional(),
+  redemption_expiry_days: z.number().optional(),
+  contact_phone: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  contact_address: z.string().nullable().optional(),
+  whatsapp_number: z.string().nullable().optional(),
+  facebook_url: z.string().nullable().optional(),
+  instagram_url: z.string().nullable().optional(),
+  twitter_url: z.string().nullable().optional(),
+  show_winner_info: z.boolean().optional(),
+  show_contact_info: z.boolean().optional(),
+  show_watermark: z.boolean().optional(),
+  status: z.string(),
+  start_datetime: z.string().nullable().optional(),
+  end_datetime: z.string().nullable().optional(),
+  timezone: z.string().default("UTC"),
+  valid_countries: z.array(z.string()).optional(),
+  terms_conditions: z.string().nullable().optional(),
+  privacy_policy: z.string().nullable().optional(),
+  scratch_card_shape: z.string().optional(),
+  scratch_mask_style: z.string().optional(),
+  scratch_instructions_title: z.string().optional(),
+  scratch_instructions_subtitle: z.string().optional(),
+  is_published: z.boolean().optional(),
+  campaign_payment_type: z.enum(["PAY_PER_CAMPAIGN", "SUBSCRIPTION"]).optional(),
+  spins_count: z.number(),
+  leads_count: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type Campaign = z.infer<typeof CampaignSchema>;
+export type WheelSegment = z.infer<typeof WheelSegmentSchema>;
+export type LeadFormField = z.infer<typeof LeadFormFieldSchema>;
+
+// Lead schema
+export const LeadSchema = z.object({
+  id: z.string(),
+  campaign_id: z.string(),
+  name: z.string().nullable(),
+  email: z.string(),
+  phone: z.string().nullable(),
+  custom_field_value: z.string().nullable(),
+  prize_won: z.string().nullable(),
+  reference_number: z.string().nullable(),
+  redemption_expires_at: z.string().nullable(),
+  is_redeemed: z.boolean().optional(),
+  redeemed_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type Lead = z.infer<typeof LeadSchema>;
+
+// API request/response schemas
+export const CreateCampaignRequestSchema = z.object({
+  name: z.string().min(1),
+  template_id: z.string().optional(),
+});
+
+export const UpdateCampaignRequestSchema = z.object({
+  name: z.string().optional(),
+  logo_url: z.string().nullable().optional(),
+  cover_image_url: z.string().nullable().optional(),
+  is_lead_form_required: z.boolean().optional(),
+  lead_form_fields: z.array(LeadFormFieldSchema).optional(),
+  wheel_segments: z.array(WheelSegmentSchema).optional(),
+  wheel_colors: z.object({
+    primary: z.string(),
+    secondary: z.string(),
+  }).optional(),
+  pointer_color: z.string().nullable().optional(),
+  background_color: z.string().nullable().optional(),
+  background_gradient_enabled: z.boolean().optional(),
+  background_gradient_start: z.string().nullable().optional(),
+  background_gradient_end: z.string().nullable().optional(),
+  background_gradient_direction: z.string().nullable().optional(),
+  background_image_url: z.string().nullable().optional(),
+  logo_position: z.string().nullable().optional(),
+  confetti_enabled: z.boolean().optional(),
+  sound_enabled: z.boolean().optional(),
+  sound_settings: z.object({
+    spin: z.boolean(),
+    win: z.boolean(),
+    noWin: z.boolean(),
+  }).optional(),
+  font_family: z.string().nullable().optional(),
+  font_size: z.number().nullable().optional(),
+  wheel_border_thickness: z.number().nullable().optional(),
+  wheel_border_color: z.string().nullable().optional(),
+  pointer_style: z.string().nullable().optional(),
+  spin_button_text: z.string().nullable().optional(),
+  spin_button_color: z.string().nullable().optional(),
+  spin_button_border_radius: z.number().nullable().optional(),
+  spin_button_pulse_enabled: z.boolean().optional(),
+  spin_limit_per_email: z.number().nullable().optional(),
+  spin_limit_per_phone: z.number().nullable().optional(),
+  spin_limit_per_ip: z.number().nullable().optional(),
+  spin_limit_per_device: z.number().nullable().optional(),
+  spin_limit_per_day: z.number().nullable().optional(),
+  spin_limit_per_week: z.number().nullable().optional(),
+  spin_limit_total: z.number().nullable().optional(),
+  spin_cooldown_hours: z.number().nullable().optional(),
+  spin_duration_seconds: z.number().nullable().optional(),
+  redemption_instructions: z.string().nullable().optional(),
+  border_enabled: z.boolean().optional(),
+  border_theme: z.union([z.enum(["default", "custom"]), z.literal("none"), z.null()]).optional().transform((val) => val === "none" ? null : val),
+  border_default_enabled: z.boolean().optional(),
+  border_default_color: z.string().nullable().optional(),
+  border_default_thickness: z.number().nullable().optional(),
+  border_custom_colors: z.array(z.string()).nullable().optional(),
+  border_bulb_shape: z.string().nullable().optional(),
+  border_bulb_count: z.number().nullable().optional(),
+  border_bulb_size: z.number().nullable().optional(),
+  border_blink_speed: z.string().nullable().optional(),
+  border_connector_ring_enabled: z.boolean().optional(),
+  border_connector_ring_color: z.string().nullable().optional(),
+  border_connector_ring_thickness: z.number().nullable().optional(),
+  redemption_expiry_days: z.number().nullable().optional(),
+  contact_phone: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  contact_address: z.string().nullable().optional(),
+  whatsapp_number: z.string().nullable().optional(),
+  facebook_url: z.string().nullable().optional(),
+  instagram_url: z.string().nullable().optional(),
+  twitter_url: z.string().nullable().optional(),
+  show_winner_info: z.boolean().optional(),
+  show_contact_info: z.boolean().optional(),
+  show_watermark: z.boolean().optional(),
+  status: z.string().optional(),
+  start_datetime: z.string().nullable().optional(),
+  end_datetime: z.string().nullable().optional(),
+  timezone: z.string().optional(),
+  valid_countries: z.array(z.string()).optional(),
+  terms_conditions: z.string().nullable().optional(),
+  privacy_policy: z.string().nullable().optional(),
+  scratch_card_shape: z.string().nullable().optional(),
+  scratch_mask_style: z.string().nullable().optional(),
+  scratch_instructions_title: z.string().nullable().optional(),
+  scratch_instructions_subtitle: z.string().nullable().optional(),
+  campaign_payment_type: z.enum(["PAY_PER_CAMPAIGN", "SUBSCRIPTION"]).optional(),
+});
+
+export const UpdateUserRequestSchema = z.object({
+  business_name: z.string().optional(),
+  country: z.string().optional(),
+  currency: z.string().optional(),
+});
+
+export const ProfileSetupRequestSchema = z.object({
+  full_name: z.string().min(1),
+  business_name: z.string().min(1),
+  industry: z.string().min(1),
+  country: z.string().min(1),
+  phone: z.string().optional(),
+});
+
+export const SubmitLeadRequestSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  custom_field_value: z.string().optional(),
+});
+
+export type CreateCampaignRequest = z.infer<typeof CreateCampaignRequestSchema>;
+export type UpdateCampaignRequest = z.infer<typeof UpdateCampaignRequestSchema>;
+export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
+export type SubmitLeadRequest = z.infer<typeof SubmitLeadRequestSchema>;
+export type ProfileSetupRequest = z.infer<typeof ProfileSetupRequestSchema>;

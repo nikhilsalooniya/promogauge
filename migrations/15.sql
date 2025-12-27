@@ -1,0 +1,5 @@
+
+ALTER TABLE users ADD COLUMN full_name TEXT;
+ALTER TABLE users ADD COLUMN industry TEXT;
+ALTER TABLE users ADD COLUMN phone TEXT;
+ALTER TABLE users ADD COLUMN profile_completed BOOLEAN DEFAULT 0;

@@ -1,0 +1,5 @@
+
+DROP INDEX idx_campaign_analytics_created_at;
+DROP INDEX idx_campaign_analytics_event_type;
+DROP INDEX idx_campaign_analytics_campaign_id;
+DROP TABLE campaign_analytics;
