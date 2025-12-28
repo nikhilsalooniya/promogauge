@@ -8,6 +8,7 @@ export async function handleHowItWorksImageUpload(c: Context<{ Bindings: Env }>)
 
     if (!file || !(file instanceof File)) {
       return c.json({ error: "No file provided" }, 400);
+      
     }
 
     // Validate file type

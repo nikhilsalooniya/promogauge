@@ -1,0 +1,1 @@
+ALTER TABLE payment_gateway_settings DROP COLUMN display_name;

@@ -54,11 +54,13 @@ export default function AdminPaymentGateways() {
     api_secret: string;
     webhook_secret: string;
     is_active: boolean;
+    display_name: string;
   }>({
     api_key: "",
     api_secret: "",
     webhook_secret: "",
     is_active: true,
+    display_name: "",
   });
 
   useEffect(() => {
@@ -109,6 +111,7 @@ export default function AdminPaymentGateways() {
             api_secret: data.gateway.api_secret || "",
             webhook_secret: data.gateway.webhook_secret || "",
             is_active: data.gateway.is_active,
+            display_name: data.gateway.display_name || "",
           });
         } else {
           setFormData({
@@ -116,6 +119,7 @@ export default function AdminPaymentGateways() {
             api_secret: "",
             webhook_secret: "",
             is_active: true,
+            display_name: "",
           });
         }
       }
@@ -297,6 +301,22 @@ export default function AdminPaymentGateways() {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.display_name}
+                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                  placeholder={`e.g., ${currentGateway.displayName}, Card Payment, Mobile Money`}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This name will appear in the payment method selection modal. Leave empty to use default ({currentGateway.displayName}).
+                </p>
+              </div>
+
               {currentGateway.fields.map((field) => (
                 <div key={field.key}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

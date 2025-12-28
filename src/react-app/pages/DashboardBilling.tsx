@@ -10,6 +10,7 @@ import {
 interface Gateway {
   gateway_name: string;
   is_active: boolean;
+  display_name?: string;
 }
 
 interface Transaction {
@@ -194,11 +195,16 @@ export default function DashboardBilling() {
     return date.toLocaleDateString();
   };
 
-  const getGatewayDisplayName = (gatewayName: string) => {
-    if (gatewayName.toLowerCase() === 'paystack') {
+  const getGatewayDisplayName = (gateway: Gateway) => {
+    // Use custom display name if set
+    if (gateway.display_name) {
+      return gateway.display_name;
+    }
+    // Fallback to default naming
+    if (gateway.gateway_name.toLowerCase() === 'paystack') {
       return 'Secure Card/Mobile Payment';
     }
-    return gatewayName;
+    return gateway.gateway_name.charAt(0).toUpperCase() + gateway.gateway_name.slice(1);
   };
 
   const toggleCampaignPlan = (planId: string) => {
@@ -740,7 +746,7 @@ export default function DashboardBilling() {
                   <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 flex-shrink-0" />
                     <span className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                      {getGatewayDisplayName(gateway.gateway_name)}
+                      {getGatewayDisplayName(gateway)}
                     </span>
                   </div>
                   {processingGateway === gateway.gateway_name && <Loader2 className="w-5 h-5 animate-spin text-indigo-600 flex-shrink-0" />}

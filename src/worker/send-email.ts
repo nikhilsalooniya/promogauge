@@ -7,17 +7,22 @@ export async function sendEmail(
 ): Promise<boolean> {
   try {
     console.log(`[Email] Attempting to send ${templateName} to ${to}`);
+
     
     // Get active email integration settings
     const emailSettings = await env.DB.prepare(
       "SELECT * FROM email_integration_settings WHERE provider = 'mailgun' AND is_active = 1"
     ).first();
 
+    console.log('Edited by one.salooniya@gmail.com');
+    
     if (!emailSettings) {
       console.error("[Email] Mailgun integration not configured or not active");
       return false;
     }
 
+    console.log(`[Email] Using config: ${emailSettings.is_sandbox ? 'SANDBOX' : 'LIVE'} | Domain: ${emailSettings.api_domain} | Sender: ${emailSettings.sender_email}`);
+    
     // Get email template
     const template = await env.DB.prepare(
       "SELECT * FROM email_templates WHERE template_name = ?"
@@ -41,21 +46,27 @@ export async function sendEmail(
     }
 
     // Determine Mailgun API endpoint
-    const apiDomain = emailSettings.api_domain as string;
+    const apiDomain = (emailSettings.api_domain as string) || "mg.promoguage.com";
     const mailgunUrl = `https://api.mailgun.net/v3/${apiDomain}/messages`;
 
     // Send via Mailgun
     const formData = new FormData();
-    formData.append('from', `${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    const senderName = (emailSettings.sender_name as string) || "PromoGuage";
+    const senderEmail = (emailSettings.sender_email as string) || "noreply@mg.promoguage.com";
+    const apiKey = (emailSettings.api_key as string);
+    
+    formData.append('from', `${senderName} <${senderEmail}>`);
     formData.append('to', to);
     formData.append('subject', subject);
     formData.append('html', htmlBody);
     formData.append('text', textBody);
+    
+    console.log(`[Email] Sending to: ${to}, From: ${senderName} <${senderEmail}>, Subject: ${subject}`);
 
     const mailgunRes = await fetch(mailgunUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`api:${emailSettings.api_key}`)}`,
+        'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
       },
       body: formData,
     });

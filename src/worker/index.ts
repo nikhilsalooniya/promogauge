@@ -207,46 +207,90 @@ app.patch("/api/users/me", authMiddleware, async (c) => {
   const businessName = (updatedUser as any).business_name || 'Not provided';
   const userCountry = (updatedUser as any).country || 'Not provided';
   const userIndustry = (updatedUser as any).industry || 'Not provided';
-  
-  sendEmail(
-    mochaUser.email,
-    'welcome_email_owner',
-    {
-      user_name: userName,
-      dashboard_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/dashboard`,
-      help_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/how-it-works`,
-    },
-    c.env
-  ).then(sent => {
-    if (sent) {
-      console.log(`[Profile Setup] Welcome email sent to ${mochaUser.email}`);
-    } else {
-      console.error(`[Profile Setup] Failed to send welcome email to ${mochaUser.email}`);
-    }
-  }).catch(err => console.error('[Profile Setup] Welcome email error:', err));
 
-  // Send admin notification email (async, don't wait)
-  getAdminEmails(c.env).then(adminEmails => {
-    for (const adminEmail of adminEmails) {
+  // **** CUSTOM: one.salooniya@gmail.com
+
+  c.executionCtx.waitUntil(
+    Promise.all([
+      // 1. Send Welcome Email to the User
       sendEmail(
-        adminEmail,
-        'admin_new_signup',
+        mochaUser.email,
+        'welcome_email_owner',
         {
           user_name: userName,
-          user_email: mochaUser.email,
-          business_name: businessName,
-          country: userCountry,
-          industry: userIndustry || 'Not provided',
-          signup_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          dashboard_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/dashboard`,
+          help_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/how-it-works`,
         },
         c.env
       ).then(sent => {
-        if (sent) {
-          console.log(`[Profile Setup] Admin notification sent to ${adminEmail}`);
-        }
-      }).catch(err => console.error('[Profile Setup] Admin email error:', err));
-    }
-  }).catch(err => console.error('[Profile Setup] Failed to get admin emails:', err));
+        if (sent) console.log(`[Profile Update] Welcome email sent to ${mochaUser.email}`);
+        else console.error(`[Profile Update] Failed to send welcome email to ${mochaUser.email}`);
+      }),
+
+      // 2. Send Notification to Admins
+      getAdminEmails(c.env).then(adminEmails => {
+        const adminPromises = adminEmails.map(adminEmail => 
+          sendEmail(
+            adminEmail,
+            'admin_new_signup',
+            {
+              user_name: userName,
+              user_email: mochaUser.email,
+              business_name: businessName,
+              country: userCountry,
+              industry: userIndustry,
+              signup_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            },
+            c.env
+          )
+        );
+        return Promise.all(adminPromises);
+      }).catch(err => console.error('[Profile Update] Failed to notify admins:', err))
+    ])
+  );
+  
+  // **** CUSTOM: one.salooniya@gmail.com
+
+  // **** CUSTOM: OLD CODE COMMENTED OUT
+  // sendEmail(
+  //   mochaUser.email,
+  //   'welcome_email_owner',
+  //   {
+  //     user_name: userName,
+  //     dashboard_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/dashboard`,
+  //     help_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/how-it-works`,
+  //   },
+  //   c.env
+  // ).then(sent => {
+  //   if (sent) {
+  //     console.log(`[Profile Setup] Welcome email sent to ${mochaUser.email}`);
+  //   } else {
+  //     console.error(`[Profile Setup] Failed to send welcome email to ${mochaUser.email}`);
+  //   }
+  // }).catch(err => console.error('[Profile Setup] Welcome email error:', err));
+
+  // // Send admin notification email (async, don't wait)
+  // getAdminEmails(c.env).then(adminEmails => {
+  //   for (const adminEmail of adminEmails) {
+  //     sendEmail(
+  //       adminEmail,
+  //       'admin_new_signup',
+  //       {
+  //         user_name: userName,
+  //         user_email: mochaUser.email,
+  //         business_name: businessName,
+  //         country: userCountry,
+  //         industry: userIndustry || 'Not provided',
+  //         signup_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+  //       },
+  //       c.env
+  //     ).then(sent => {
+  //       if (sent) {
+  //         console.log(`[Profile Setup] Admin notification sent to ${adminEmail}`);
+  //       }
+  //     }).catch(err => console.error('[Profile Setup] Admin email error:', err));
+  //   }
+  // }).catch(err => console.error('[Profile Setup] Failed to get admin emails:', err));
 
   return c.json(updatedUser);
 });
@@ -297,6 +341,63 @@ app.post("/api/users/profile-setup", authMiddleware, async (c) => {
     "SELECT * FROM users WHERE id = ?"
   ).bind(appUser.id).first();
 
+  // **** CUSTOM: one.salooniya@gmail.com
+
+  // FIX 1: Add the Welcome Email logic here
+  const userName = validatedData.full_name || 'Valued Customer';
+  
+  // Only send welcome email if user doesn't have an active subscription
+  // (to avoid sending welcome email after they just purchased a plan)
+  const shouldSendWelcome = !updatedUser || 
+    (updatedUser.plan_type === 'free' && 
+     updatedUser.subscription_status !== 'active');
+  
+  if (shouldSendWelcome) {
+    // FIX 2: Use c.executionCtx.waitUntil to ensure the email sends in the background
+    c.executionCtx.waitUntil(
+      Promise.all([
+        // Send Welcome Email to User
+        sendEmail(
+          mochaUser.email,
+          'welcome_email_owner',
+          {
+            user_name: userName,
+            dashboard_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/dashboard`,
+            help_link: `${c.req.header("origin") || 'https://promoguage.mocha.app'}/how-it-works`,
+          },
+          c.env
+        ).then(sent => {
+          if (sent) console.log(`[Profile Setup] Welcome email sent to ${mochaUser.email}`);
+          else console.error(`[Profile Setup] Failed to send welcome email`);
+        }),
+
+      // Send Admin Notification
+      getAdminEmails(c.env).then(adminEmails => {
+        const emailPromises = adminEmails.map(adminEmail => 
+          sendEmail(
+            adminEmail,
+            'admin_new_signup',
+            {
+              user_name: userName,
+              user_email: mochaUser.email,
+              business_name: validatedData.business_name,
+              country: validatedData.country,
+              industry: validatedData.industry || 'Not provided',
+              signup_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            },
+            c.env
+          )
+        );
+        return Promise.all(emailPromises);
+      })
+    ])
+    );
+  } else {
+    console.log(`[Profile Setup] Skipping welcome email for ${mochaUser.email} - user already has active subscription`);
+  }
+  
+  // **** CUSTOM: one.salooniya@gmail.com
+  
   return c.json(updatedUser);
 });
 
@@ -1664,7 +1765,7 @@ app.patch("/api/campaigns/:campaignId/leads/:leadId/redeem", authMiddleware, asy
 app.get("/api/billing/active-gateways", async (c) => {
   try {
     const { results: gateways } = await c.env.DB.prepare(
-      "SELECT gateway_name, is_active FROM payment_gateway_settings WHERE is_active = 1"
+      "SELECT gateway_name, is_active, display_name FROM payment_gateway_settings WHERE is_active = 1"
     ).all();
 
     return c.json({ gateways });
@@ -2271,44 +2372,94 @@ app.post("/api/webhooks/paypal", async (c) => {
           ).bind(userId).first();
 
           if (userForEmail) {
-            // Fetch user email from Mocha service
-            const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${userForEmail.mocha_user_id}`, {
-              headers: {
-                'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
-              },
-            });
 
-            if (mochaUserRes.ok) {
-              const mochaUser = await mochaUserRes.json() as { email: string };
-              
-              // Send subscription receipt email (async, don't wait)
-              const nextBillingDate = new Date(expiryDate);
-              const planNames: Record<string, string> = {
-                'starter': 'Starter Plan',
-                'business': 'Business Plan',
-                'pro': 'Pro Plan',
-              };
-              
-              sendEmail(
-                mochaUser.email,
-                'subscription_receipt_owner',
-                {
-                  user_name: userForEmail.full_name as string || 'Valued Customer',
-                  plan_name: planNames[planType] || 'Subscription Plan',
-                  amount: amount.toFixed(2),
-                  currency: currency,
-                  billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
-                  next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                  transaction_id: subscription.id,
-                  dashboard_link: 'https://promoguage.mocha.app/dashboard',
+            // **** CUSTOM: one.salooniya@gmail.com
+
+            // FIX: Use waitUntil to ensure background email sending completes
+          c.executionCtx.waitUntil((async () => {
+            try {
+              const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(userForEmail as any).mocha_user_id}`, {
+                headers: {
+                  'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
                 },
-                c.env
-              ).then(sent => {
-                if (sent) {
-                  console.log(`[PayPal Webhook] Receipt email sent to ${mochaUser.email}`);
-                }
-              }).catch(err => console.error('[PayPal Webhook] Receipt email error:', err));
+              });
+
+              if (mochaUserRes.ok) {
+                const mochaUser = await mochaUserRes.json() as { email: string };
+                
+                const nextBillingDate = new Date(expiryDate);
+                const planNames: Record<string, string> = {
+                  'starter': 'Starter Plan',
+                  'business': 'Business Plan',
+                  'pro': 'Pro Plan',
+                };
+                
+                await sendEmail(
+                  mochaUser.email,
+                  'subscription_receipt_owner',
+                  {
+                    user_name: (userForEmail as any).full_name || 'Valued Customer',
+                    plan_name: planNames[planType] || 'Subscription Plan',
+                    amount: amount.toFixed(2),
+                    currency: currency,
+                    billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+                    next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                    transaction_id: subscription.id,
+                    dashboard_link: 'https://promoguage.mocha.app/dashboard',
+                  },
+                  c.env
+                );
+                console.log(`[PayPal Webhook] Receipt email sent to ${mochaUser.email}`);
+              }
+            } catch (err) {
+              console.error('[PayPal Webhook] Failed to send receipt email:', err);
             }
+          })());
+            
+            // **** CUSTOM: one.salooniya@gmail.com
+            
+            // // Fetch user email from Mocha service
+            // const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${userForEmail.mocha_user_id}`, {
+            //   headers: {
+            //     'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
+            //   },
+            // });
+
+            // if (mochaUserRes.ok) {
+            //   const mochaUser = await mochaUserRes.json() as { email: string };
+              
+            //   // Send subscription receipt email (async, don't wait)
+            //   const nextBillingDate = new Date(expiryDate);
+            //   const planNames: Record<string, string> = {
+            //     'starter': 'Starter Plan',
+            //     'business': 'Business Plan',
+            //     'pro': 'Pro Plan',
+            //   };
+              
+            //   c.executionCtx.waitUntil(
+            //     sendEmail(
+            //       mochaUser.email,
+            //       'subscription_receipt_owner',
+            //       {
+            //         user_name: userForEmail.full_name as string || 'Valued Customer',
+            //         plan_name: planNames[planType] || 'Subscription Plan',
+            //         amount: amount.toFixed(2),
+            //         currency: currency,
+            //         billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+            //         next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            //         transaction_id: subscription.id,
+            //         dashboard_link: 'https://promoguage.mocha.app/dashboard',
+            //       },
+            //       c.env
+            //     ).then(sent => {
+            //       if (sent) {
+            //         console.log(`[PayPal Webhook] Receipt email sent to ${mochaUser.email}`);
+            //       } else {
+            //         console.error(`[PayPal Webhook] Failed to send receipt email to ${mochaUser.email}`);
+            //       }
+            //     }).catch(err => console.error('[PayPal Webhook] Receipt email error:', err))
+            //   );
+            // }
           }
         }
       }
@@ -2442,24 +2593,18 @@ app.post("/api/webhooks/paystack", async (c) => {
           const transactionAmount = Number(transaction.amount);
           const transactionCurrency = transaction.currency as string;
           
-          console.log(`[Paystack Webhook] Looking for plan with: amount=${transactionAmount}, currency=${transactionCurrency}, billing_interval=${billingCycle}`);
+          console.log(`[Paystack Webhook] Looking for plan: amount=${transactionAmount}, currency=${transactionCurrency}, cycle=${billingCycle}`);
           
           const planRes = await c.env.DB.prepare(
             "SELECT lead_limit, campaign_limit, remove_watermark, name, amount, billing_interval FROM billing_plans WHERE amount = ? AND currency = ? AND billing_interval = ? AND plan_type = 'subscription' LIMIT 1"
           ).bind(transactionAmount, transactionCurrency, billingCycle).first();
 
-          if (planRes) {
-            console.log(`[Paystack Webhook] Found plan: "${planRes.name}", lead_limit: ${planRes.lead_limit}, campaign_limit: ${planRes.campaign_limit}`);
-          } else {
-            console.error(`[Paystack Webhook] No plan found for amount=${transactionAmount}, currency=${transactionCurrency}, billing_interval=${billingCycle}`);
-          }
-
           const leadCredits = planRes?.lead_limit ? Number(planRes.lead_limit) : 0;
           const campaignCredits = planRes?.campaign_limit ? Number(planRes.campaign_limit) : 0;
           
-          console.log(`[Paystack Webhook] Granting credits - lead_credits: ${leadCredits}, campaign_credits: ${campaignCredits}`);
+          console.log(`[Paystack Webhook] Granting credits: Leads=${leadCredits}, Campaigns=${campaignCredits}`);
 
-          const userUpdateResult = await c.env.DB.prepare(
+          await c.env.DB.prepare(
             `UPDATE users SET 
               plan_type = ?,
               subscription_status = ?,
@@ -2479,61 +2624,222 @@ app.post("/api/webhooks/paystack", async (c) => {
             userId
           ).run();
           
-          console.log(`[Paystack Webhook] User subscription updated: ${userUpdateResult.meta.changes} rows affected`);
-          console.log(`[Paystack Webhook] Credits granted - Lead: +${leadCredits}, Campaign: +${campaignCredits}`);
-          
-          // Verify credits were added
-          const updatedUser = await c.env.DB.prepare(
-            "SELECT campaign_credits, lead_credits, plan_type, subscription_status, full_name, mocha_user_id FROM users WHERE id = ?"
+          // --- EMAIL FIX START ---
+          // Fetch the updated user details so we have the name
+          const finalUser = await c.env.DB.prepare(
+            "SELECT full_name, mocha_user_id FROM users WHERE id = ?"
           ).bind(userId).first();
-          console.log(`[Paystack Webhook] User after update:`, updatedUser);
 
-          // Get user data for email
-          if (updatedUser) {
-            // Fetch user email from Mocha service
-            const mochaUserRes = await c.env.DB.prepare(
-              "SELECT mocha_user_id FROM users WHERE id = ?"
-            ).bind(userId).first();
-
-            if (mochaUserRes) {
-              const mochaUserFetch = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(mochaUserRes as any).mocha_user_id}`, {
-                headers: {
-                  'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
-                },
-              });
-
-              if (mochaUserFetch.ok) {
-                const mochaUser = await mochaUserFetch.json() as { email: string };
-                
-                // Send subscription receipt email (async, don't wait)
-                const nextBillingDate = new Date(expiryDate);
-                const planNames: Record<string, string> = {
-                  'starter': 'Starter Plan',
-                  'business': 'Business Plan',
-                  'pro': 'Pro Plan',
-                };
-                
-                sendEmail(
-                  mochaUser.email,
-                  'subscription_receipt_owner',
-                  {
-                    user_name: (updatedUser as any).full_name || 'Valued Customer',
-                    plan_name: planNames[transaction.plan_type as string] || 'Subscription Plan',
-                    amount: transactionAmount.toFixed(2),
-                    currency: transactionCurrency,
-                    billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
-                    next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                    transaction_id: reference,
-                    dashboard_link: 'https://promoguage.mocha.app/dashboard',
+          if (finalUser) {
+            // CRITICAL FIX: Wrap the email logic in waitUntil so the worker doesn't die
+            c.executionCtx.waitUntil((async () => {
+              try {
+                // 1. Get user email from Mocha Service
+                const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(finalUser as any).mocha_user_id}`, {
+                  headers: {
+                    'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
                   },
-                  c.env
-                ).then(sent => {
-                  if (sent) {
-                    console.log(`[Paystack Webhook] Receipt email sent to ${mochaUser.email}`);
+                });
+
+                if (mochaUserRes.ok) {
+                  const mochaUser = await mochaUserRes.json() as { email: string };
+                  
+                  // 2. Prepare email data
+                  const nextBillingDate = new Date(expiryDate);
+                  const planNames: Record<string, string> = {
+                    'starter': 'Starter Plan',
+                    'business': 'Business Plan',
+                    'pro': 'Pro Plan',
+                  };
+                  
+                  // 3. Send the email using the robust sendEmail function
+                  const emailSent = await sendEmail(
+                    mochaUser.email,
+                    'subscription_receipt_owner',
+                    {
+                      user_name: (finalUser as any).full_name || 'Valued Customer',
+                      plan_name: planNames[transaction.plan_type as string] || 'Subscription Plan',
+                      amount: transactionAmount.toFixed(2),
+                      currency: transactionCurrency,
+                      billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+                      next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                      transaction_id: reference,
+                      dashboard_link: 'https://promoguage.mocha.app/dashboard',
+                    },
+                    c.env
+                  );
+
+                  if (emailSent) {
+                    console.log(`[Paystack Webhook] SUCCESS: Receipt email sent to ${mochaUser.email}`);
+                  } else {
+                    console.error(`[Paystack Webhook] FAILED: sendEmail returned false`);
                   }
-                }).catch(err => console.error('[Paystack Webhook] Receipt email error:', err));
+                }
+              } catch (err) {
+                console.error('[Paystack Webhook] EXCEPTION in background email task:', err);
               }
-            }
+            })());
+          // // Calculate expiry date
+          // const billingCycle = transactionMeta.billingCycle || 'monthly';
+          // const expiryDate = new Date();
+          // if (billingCycle === 'weekly') {
+          //   expiryDate.setDate(expiryDate.getDate() + 7);
+          // } else {
+          //   expiryDate.setMonth(expiryDate.getMonth() + 1);
+          // }
+
+          // // Match plan by amount, currency, and billing_interval
+          // const transactionAmount = Number(transaction.amount);
+          // const transactionCurrency = transaction.currency as string;
+          
+          // console.log(`[Paystack Webhook] Looking for plan with: amount=${transactionAmount}, currency=${transactionCurrency}, billing_interval=${billingCycle}`);
+          
+          // const planRes = await c.env.DB.prepare(
+          //   "SELECT lead_limit, campaign_limit, remove_watermark, name, amount, billing_interval FROM billing_plans WHERE amount = ? AND currency = ? AND billing_interval = ? AND plan_type = 'subscription' LIMIT 1"
+          // ).bind(transactionAmount, transactionCurrency, billingCycle).first();
+
+          // if (planRes) {
+          //   console.log(`[Paystack Webhook] Found plan: "${planRes.name}", lead_limit: ${planRes.lead_limit}, campaign_limit: ${planRes.campaign_limit}`);
+          // } else {
+          //   console.error(`[Paystack Webhook] No plan found for amount=${transactionAmount}, currency=${transactionCurrency}, billing_interval=${billingCycle}`);
+          // }
+
+          // const leadCredits = planRes?.lead_limit ? Number(planRes.lead_limit) : 0;
+          // const campaignCredits = planRes?.campaign_limit ? Number(planRes.campaign_limit) : 0;
+          
+          // console.log(`[Paystack Webhook] Granting credits - lead_credits: ${leadCredits}, campaign_credits: ${campaignCredits}`);
+
+          // const userUpdateResult = await c.env.DB.prepare(
+          //   `UPDATE users SET 
+          //     plan_type = ?,
+          //     subscription_status = ?,
+          //     billing_cycle = ?,
+          //     plan_expires_at = ?,
+          //     lead_credits = lead_credits + ?,
+          //     campaign_credits = campaign_credits + ?,
+          //     updated_at = datetime('now')
+          //   WHERE id = ?`
+          // ).bind(
+          //   transaction.plan_type,
+          //   'active',
+          //   billingCycle,
+          //   expiryDate.toISOString(),
+          //   leadCredits,
+          //   campaignCredits,
+          //   userId
+          // ).run();
+          
+          // console.log(`[Paystack Webhook] User subscription updated: ${userUpdateResult.meta.changes} rows affected`);
+          // console.log(`[Paystack Webhook] Credits granted - Lead: +${leadCredits}, Campaign: +${campaignCredits}`);
+          
+          // // Verify credits were added
+          // const updatedUser = await c.env.DB.prepare(
+          //   "SELECT campaign_credits, lead_credits, plan_type, subscription_status, full_name, mocha_user_id FROM users WHERE id = ?"
+          // ).bind(userId).first();
+          // console.log(`[Paystack Webhook] User after update:`, updatedUser);
+
+          // // Get user data for email
+          // if (updatedUser) {
+
+          //   // *** CUSTOM
+
+          //   // FIX: Use waitUntil to ensure background email sending completes
+          //   c.executionCtx.waitUntil((async () => {
+          //     try {
+          //       const mochaUserRes = await c.env.DB.prepare(
+          //         "SELECT mocha_user_id FROM users WHERE id = ?"
+          //       ).bind(userId).first();
+
+          //       if (mochaUserRes) {
+          //         const mochaUserFetch = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(mochaUserRes as any).mocha_user_id}`, {
+          //           headers: {
+          //             'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
+          //           },
+          //         });
+
+          //         if (mochaUserFetch.ok) {
+          //           const mochaUser = await mochaUserFetch.json() as { email: string };
+                    
+          //           const nextBillingDate = new Date(expiryDate);
+          //           const planNames: Record<string, string> = {
+          //             'starter': 'Starter Plan',
+          //             'business': 'Business Plan',
+          //             'pro': 'Pro Plan',
+          //           };
+                    
+          //           await sendEmail(
+          //             mochaUser.email,
+          //             'subscription_receipt_owner',
+          //             {
+          //               user_name: (updatedUser as any).full_name || 'Valued Customer',
+          //               plan_name: planNames[transaction.plan_type as string] || 'Subscription Plan',
+          //               amount: transactionAmount.toFixed(2),
+          //               currency: transactionCurrency,
+          //               billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+          //               next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          //               transaction_id: reference,
+          //               dashboard_link: 'https://promoguage.mocha.app/dashboard',
+          //             },
+          //             c.env
+          //           );
+          //           console.log(`[Paystack Webhook] Receipt email sent to ${mochaUser.email}`);
+          //         }
+          //       }
+          //     } catch (err) {
+          //       console.error('[Paystack Webhook] Failed to send receipt email:', err);
+          //     }
+          //   })());
+            
+            // *** CUSTOM
+            
+            // // Fetch user email from Mocha service
+            // const mochaUserRes = await c.env.DB.prepare(
+            //   "SELECT mocha_user_id FROM users WHERE id = ?"
+            // ).bind(userId).first();
+
+            // if (mochaUserRes) {
+            //   const mochaUserFetch = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(mochaUserRes as any).mocha_user_id}`, {
+            //     headers: {
+            //       'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
+            //     },
+            //   });
+
+            //   if (mochaUserFetch.ok) {
+            //     const mochaUser = await mochaUserFetch.json() as { email: string };
+                
+            //     // Send subscription receipt email (async, don't wait)
+            //     const nextBillingDate = new Date(expiryDate);
+            //     const planNames: Record<string, string> = {
+            //       'starter': 'Starter Plan',
+            //       'business': 'Business Plan',
+            //       'pro': 'Pro Plan',
+            //     };
+                
+            //     c.executionCtx.waitUntil(
+            //       sendEmail(
+            //         mochaUser.email,
+            //         'subscription_receipt_owner',
+            //         {
+            //           user_name: (updatedUser as any).full_name || 'Valued Customer',
+            //           plan_name: planNames[transaction.plan_type as string] || 'Subscription Plan',
+            //           amount: transactionAmount.toFixed(2),
+            //           currency: transactionCurrency,
+            //           billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+            //           next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            //           transaction_id: reference,
+            //           dashboard_link: 'https://promoguage.mocha.app/dashboard',
+            //         },
+            //         c.env
+            //       ).then(sent => {
+            //         if (sent) {
+            //           console.log(`[Paystack Webhook] Receipt email sent to ${mochaUser.email}`);
+            //         } else {
+            //           console.error(`[Paystack Webhook] Failed to send receipt email to ${mochaUser.email}`);
+            //         }
+            //       }).catch(err => console.error('[Paystack Webhook] Receipt email error:', err))
+            //     );
+            //   }
+            // }
           }
         } else if (transaction.transaction_type === 'campaign') {
           // Add campaign credits and lead credits
@@ -2699,10 +3005,12 @@ app.post("/api/billing/create-portal-session", authMiddleware, async (c) => {
 });
 
 app.post("/api/webhooks/stripe", async (c) => {
+  console.log("[Stripe Webhook] Received webhook request");
   const stripe = getStripe(c.env);
   const signature = c.req.header("stripe-signature");
 
   if (!signature) {
+    console.error("[Stripe Webhook] No signature header found");
     return c.json({ error: "No signature" }, 400);
   }
 
@@ -2710,17 +3018,21 @@ app.post("/api/webhooks/stripe", async (c) => {
 
   try {
     const body = await c.req.text();
+    console.log("[Stripe Webhook] Attempting to verify signature for event");
     event = stripe.webhooks.constructEvent(
       body,
       signature,
       c.env.STRIPE_WEBHOOK_SECRET
     );
+    console.log(`[Stripe Webhook] Signature verified successfully. Event type: ${event.type}, Event ID: ${event.id}`);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error("[Stripe Webhook] Signature verification failed:", err);
+    console.error("[Stripe Webhook] Error details:", err instanceof Error ? err.message : String(err));
     return c.json({ error: "Invalid signature" }, 400);
   }
 
   try {
+    console.log(`[Stripe Webhook] Processing event: ${event.type}`);
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -2799,39 +3111,85 @@ app.post("/api/webhooks/stripe", async (c) => {
             ).bind(appUserId).first();
 
             if (userForEmail) {
-              // Fetch user email from Mocha service
-              const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${userForEmail.mocha_user_id}`, {
-                headers: {
-                  'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
-                },
-              });
 
-              if (mochaUserRes.ok) {
-                const mochaUser = await mochaUserRes.json() as { email: string };
-                
-                // Send subscription receipt email (async, don't wait)
-                const nextBillingDate = new Date(expiryDate);
-                const planNameForEmail = planType ? (planNames[planType] || 'Subscription Plan') : 'Subscription Plan';
-                sendEmail(
-                  mochaUser.email,
-                  'subscription_receipt_owner',
-                  {
-                    user_name: userForEmail.full_name as string || 'Valued Customer',
-                    plan_name: planNameForEmail,
-                    amount: sessionAmount.toFixed(2),
-                    currency: sessionCurrency,
-                    billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
-                    next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                    transaction_id: session.id,
-                    dashboard_link: 'https://promoguage.mocha.app/dashboard',
-                  },
-                  c.env
-                ).then(sent => {
-                  if (sent) {
+              // *** CUSTOM
+
+              // FIX: Use waitUntil to ensure background email sending completes
+              c.executionCtx.waitUntil((async () => {
+                try {
+                  const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${(userForEmail as any).mocha_user_id}`, {
+                    headers: {
+                      'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
+                    },
+                  });
+  
+                  if (mochaUserRes.ok) {
+                    const mochaUser = await mochaUserRes.json() as { email: string };
+                    
+                    const nextBillingDate = new Date(expiryDate);
+                    const planNameForEmail = planType ? (planNames[planType] || 'Subscription Plan') : 'Subscription Plan';
+                    
+                    await sendEmail(
+                      mochaUser.email,
+                      'subscription_receipt_owner',
+                      {
+                        user_name: (userForEmail as any).full_name || 'Valued Customer',
+                        plan_name: planNameForEmail,
+                        amount: sessionAmount.toFixed(2),
+                        currency: sessionCurrency,
+                        billing_cycle: (billingCycle || 'monthly') === 'weekly' ? 'Weekly' : 'Monthly',
+                        next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                        transaction_id: session.id,
+                        dashboard_link: 'https://promoguage.mocha.app/dashboard',
+                      },
+                      c.env
+                    );
                     console.log(`[Stripe Webhook] Receipt email sent to ${mochaUser.email}`);
                   }
-                }).catch(err => console.error('[Stripe Webhook] Receipt email error:', err));
-              }
+                } catch (err) {
+                  console.error('[Stripe Webhook] Failed to send receipt email:', err);
+                }
+              })());
+              
+              // *** CUSTOM
+              
+              // // Fetch user email from Mocha service
+              // const mochaUserRes = await fetch(`${c.env.MOCHA_USERS_SERVICE_API_URL}/users/${userForEmail.mocha_user_id}`, {
+              //   headers: {
+              //     'Authorization': `Bearer ${c.env.MOCHA_USERS_SERVICE_API_KEY}`,
+              //   },
+              // });
+
+              // if (mochaUserRes.ok) {
+              //   const mochaUser = await mochaUserRes.json() as { email: string };
+                
+              //   // Send subscription receipt email (async, don't wait)
+              //   const nextBillingDate = new Date(expiryDate);
+              //   const planNameForEmail = planType ? (planNames[planType] || 'Subscription Plan') : 'Subscription Plan';
+              //   c.executionCtx.waitUntil(
+              //     sendEmail(
+              //       mochaUser.email,
+              //       'subscription_receipt_owner',
+              //       {
+              //         user_name: userForEmail.full_name as string || 'Valued Customer',
+              //         plan_name: planNameForEmail,
+              //         amount: sessionAmount.toFixed(2),
+              //         currency: sessionCurrency,
+              //         billing_cycle: billingCycle === 'weekly' ? 'Weekly' : 'Monthly',
+              //         next_billing_date: nextBillingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+              //         transaction_id: session.id,
+              //         dashboard_link: 'https://promoguage.mocha.app/dashboard',
+              //       },
+              //       c.env
+              //     ).then(sent => {
+              //       if (sent) {
+              //         console.log(`[Stripe Webhook] Receipt email sent to ${mochaUser.email}`);
+              //       } else {
+              //         console.error(`[Stripe Webhook] Failed to send receipt email to ${mochaUser.email}`);
+              //       }
+              //     }).catch(err => console.error('[Stripe Webhook] Receipt email error:', err))
+              //   );
+              // }
             }
           }
           // Handle one-time payments (campaign credits or lead credits)
@@ -2853,25 +3211,40 @@ app.post("/api/webhooks/stripe", async (c) => {
             ).bind(parseInt(leads), appUserId).run();
           }
 
-          // Create transaction record
-          const transactionId = nanoid();
-          await c.env.DB.prepare(
-            `INSERT INTO billing_transactions (
-              id, user_id, gateway_name, transaction_reference, transaction_type,
-              amount, currency, status, plan_type, metadata, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
-          ).bind(
-            transactionId,
-            appUserId,
-            'stripe',
-            session.id,
-            purchaseType || 'subscription',
-            (session.amount_total || 0) / 100,
-            (session.currency || 'usd').toUpperCase(),
-            'completed',
-            planType || null,
-            JSON.stringify({ billingCycle, credits, leads })
-          ).run();
+          // Update existing transaction record or create new one
+          const existingTransaction = await c.env.DB.prepare(
+            "SELECT id FROM billing_transactions WHERE transaction_reference = ? AND gateway_name = 'stripe'"
+          ).bind(session.id).first();
+
+          if (existingTransaction) {
+            console.log(`[Stripe Webhook] Updating existing transaction ${existingTransaction.id}`);
+            await c.env.DB.prepare(
+              `UPDATE billing_transactions SET 
+                status = 'completed',
+                updated_at = datetime('now')
+              WHERE id = ?`
+            ).bind(existingTransaction.id).run();
+          } else {
+            console.log(`[Stripe Webhook] Creating new transaction record for session ${session.id}`);
+            const transactionId = nanoid();
+            await c.env.DB.prepare(
+              `INSERT INTO billing_transactions (
+                id, user_id, gateway_name, transaction_reference, transaction_type,
+                amount, currency, status, plan_type, metadata, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+            ).bind(
+              transactionId,
+              appUserId,
+              'stripe',
+              session.id,
+              purchaseType || 'subscription',
+              (session.amount_total || 0) / 100,
+              (session.currency || 'usd').toUpperCase(),
+              'completed',
+              planType || null,
+              JSON.stringify({ billingCycle, credits, leads })
+            ).run();
+          }
         }
         break;
       }
@@ -2930,11 +3303,17 @@ app.post("/api/webhooks/stripe", async (c) => {
         }
         break;
       }
+      
+      default:
+        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
 
+    console.log(`[Stripe Webhook] Successfully processed event: ${event.type}`);
     return c.json({ received: true });
   } catch (error) {
-    console.error("Webhook processing error:", error);
+    console.error("[Stripe Webhook] Error processing webhook:", error);
+    console.error("[Stripe Webhook] Error details:", error instanceof Error ? error.message : String(error));
+    console.error("[Stripe Webhook] Stack trace:", error instanceof Error ? error.stack : "No stack trace");
     return c.json({ error: "Webhook processing failed" }, 500);
   }
 });
@@ -3253,6 +3632,10 @@ app.put("/api/admin/email-integration/:provider", authMiddleware, adminMiddlewar
     if (body.is_active !== undefined) {
       updates.push("is_active = ?");
       values.push(body.is_active ? 1 : 0);
+    }
+    if (body.display_name !== undefined) {
+      updates.push("display_name = ?");
+      values.push(body.display_name);
     }
 
     if (updates.length > 0) {
@@ -3910,6 +4293,10 @@ app.put("/api/admin/payment-gateways/:gateway", authMiddleware, adminMiddleware,
       updates.push("is_active = ?");
       values.push(body.is_active ? 1 : 0);
     }
+    if (body.display_name !== undefined) {
+      updates.push("display_name = ?");
+      values.push(body.display_name);
+    }
 
     if (updates.length > 0) {
       updates.push("updated_at = datetime('now')");
@@ -3925,8 +4312,8 @@ app.put("/api/admin/payment-gateways/:gateway", authMiddleware, adminMiddleware,
     await c.env.DB.prepare(
       `INSERT INTO payment_gateway_settings (
         id, gateway_name, is_sandbox, api_key, api_secret, webhook_secret,
-        additional_config, is_active, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+        additional_config, is_active, display_name, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
     ).bind(
       gatewayId,
       gatewayName,
@@ -3935,7 +4322,8 @@ app.put("/api/admin/payment-gateways/:gateway", authMiddleware, adminMiddleware,
       body.api_secret || null,
       body.webhook_secret || null,
       body.additional_config ? JSON.stringify(body.additional_config) : null,
-      body.is_active ? 1 : 0
+      body.is_active ? 1 : 0,
+      body.display_name || null
     ).run();
   }
 

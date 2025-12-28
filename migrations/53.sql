@@ -1,0 +1,1 @@
+ALTER TABLE payment_gateway_settings ADD COLUMN display_name TEXT;
